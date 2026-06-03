@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bruno David Gallery — Works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --white:#fff; --paper:#f8f7f5; --rule:#e0ddd8;
+  --muted:#999189; --mid:#5c564f; --ink:#1a1816;
+  --serif:'EB Garamond',Georgia,serif;
+  --sans:-apple-system,'Helvetica Neue',Arial,sans-serif;
+  --sidebar:270px; --header:60px;
+}
+html { font-size: 14px; }
+body { font-family:var(--sans); color:var(--ink); background:var(--white); -webkit-font-smoothing:antialiased; }
+
+/* HEADER */
+.header {
+  position:sticky; top:0; z-index:100; height:var(--header);
+  background:var(--white); border-bottom:1px solid var(--rule);
+  display:flex; align-items:center; padding:0 24px; gap:16px;
+}
+.logo { font-family:var(--serif); font-size:19px; white-space:nowrap; flex-shrink:0; }
+.logo em { font-style:italic; }
+.header-space { flex:1; }
+.filter-toggle-btn {
+  display:none; align-items:center; gap:6px; background:none;
+  border:1px solid var(--rule); padding:7px 14px; cursor:pointer;
+  font-size:13px; color:var(--ink); font-family:var(--sans);
+}
+.sort-wrap { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--mid); }
+.sort-select { border:none; background:none; font-size:13px; color:var(--ink); cursor:pointer; outline:none; font-family:var(--sans); }
+
+/* ACTIVE FILTER PILLS */
+.pills-bar { border-bottom:1px solid var(--rule); background:var(--white); display:none; }
+.pills-bar.has-pills { display:block; }
+.pills-inner { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 24px; }
+.pill { display:flex; align-items:center; gap:5px; background:var(--ink); color:#fff; font-size:12px; padding:4px 10px 4px 12px; border-radius:20px; cursor:pointer; white-space:nowrap; }
+.pill-x { font-size:15px; line-height:1; opacity:.6; }
+.pill:hover .pill-x { opacity:1; }
+.clear-all-pill { font-size:12px; color:var(--muted); background:none; border:none; cursor:pointer; font-family:var(--sans); text-decoration:underline; padding:4px; }
+.clear-all-pill:hover { color:var(--ink); }
+
+/* LAYOUT */
+.layout { display:flex; min-height:calc(100vh - var(--header)); }
+
+/* SIDEBAR */
+.sidebar {
+  width:var(--sidebar); flex-shrink:0; border-right:1px solid var(--rule);
+  position:sticky; top:var(--header); height:calc(100vh - var(--header));
+  overflow-y:auto; padding-bottom:60px;
+}
+.filter-section { border-bottom:1px solid var(--rule); }
+.filter-head { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; cursor:pointer; user-select:none; }
+.filter-head-label { font-size:13px; font-weight:500; }
+.chevron { font-size:9px; color:var(--muted); transition:transform .2s; }
+.filter-section.open .chevron { transform:rotate(180deg); }
+.filter-body { display:none; padding:4px 20px 16px; }
+.filter-section.open .filter-body { display:block; }
+
+/* Checkboxes */
+.check-item { display:flex; align-items:center; gap:10px; padding:5px 0; cursor:pointer; }
+.check-item input[type="checkbox"] {
+  appearance:none; width:15px; height:15px; border:1.5px solid var(--rule);
+  border-radius:2px; flex-shrink:0; cursor:pointer; position:relative;
+  transition:background .12s,border-color .12s;
+}
+.check-item input:checked { background:var(--ink); border-color:var(--ink); }
+.check-item input:checked::after { content:''; position:absolute; left:3px; top:1px; width:5px; height:8px; border:1.5px solid #fff; border-left:none; border-top:none; transform:rotate(45deg); }
+.check-label { font-size:13px; line-height:1.35; }
+
+/* COLOR SWATCHES */
+.color-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px 8px; padding:6px 0 8px; }
+.color-swatch { display:flex; flex-direction:column; align-items:center; gap:5px; cursor:pointer; }
+.color-circle { width:28px; height:28px; border-radius:50%; border:2px solid transparent; transition:transform .15s,box-shadow .15s; }
+.color-swatch:hover .color-circle { transform:scale(1.12); }
+.color-swatch.selected .color-circle { box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink); }
+.color-circle-label { font-size:9.5px; color:var(--muted); text-align:center; line-height:1.2; }
+
+/* SIZE BOXES */
+.size-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:4px 0; }
+.size-box { border:1.5px solid var(--rule); padding:10px 6px; cursor:pointer; text-align:center; transition:border-color .15s,background .15s; border-radius:3px; }
+.size-box:hover { border-color:var(--mid); }
+.size-box.selected { border-color:var(--ink); background:var(--ink); color:#fff; }
+.size-box-name { font-size:12px; font-weight:500; display:block; margin-bottom:3px; }
+.size-box-range { font-size:10px; opacity:.6; display:block; }
+.size-box.selected .size-box-range { opacity:.8; }
+
+/* YEAR RANGE */
+.year-inputs { display:flex; gap:8px; align-items:center; padding:4px 0; }
+.year-input { flex:1; border:1px solid var(--rule); padding:7px 8px; font-size:13px; font-family:var(--sans); color:var(--ink); outline:none; border-radius:2px; background:var(--white); }
+.year-input:focus { border-color:var(--ink); }
+.year-sep { color:var(--muted); font-size:13px; }
+
+/* PRICE */
+.price-inputs { display:flex; gap:8px; align-items:center; padding:4px 0; }
+.price-input { flex:1; border:1px solid var(--rule); padding:7px 8px; font-size:13px; font-family:var(--sans); color:var(--ink); outline:none; border-radius:2px; background:var(--white); }
+.price-input:focus { border-color:var(--ink); }
+.price-sep { color:var(--muted); font-size:13px; }
+
+/* MAIN */
+.main { flex:1; padding:24px 28px; min-width:0; }
+.results-header { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:24px; }
+.results-title { font-family:var(--serif); font-size:22px; }
+.results-count { font-size:13px; color:var(--muted); margin-left:8px; }
+
+/* GRID */
+.grid { columns:3; column-gap:20px; }
+.grid-item { break-inside:avoid; margin-bottom:22px; cursor:pointer; }
+.img-wrap { margin-bottom:11px; position:relative; overflow:hidden; background:var(--paper); }
+.img-wrap img { width:100%; display:block; transition:transform .45s ease; }
+.grid-item:hover .img-wrap img { transform:scale(1.04); }
+.img-placeholder { width:100%; background:var(--paper); display:flex; align-items:center; justify-content:center; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.art-artist { font-size:13px; font-weight:500; margin-bottom:2px; }
+.art-title { font-family:var(--serif); font-size:15px; font-style:italic; color:var(--mid); margin-bottom:2px; line-height:1.3; }
+.art-year-medium { font-size:12px; color:var(--muted); margin-bottom:1px; }
+.art-dims { font-size:12px; color:var(--muted); margin-bottom:4px; }
+.art-price { font-size:13px; font-weight:500; color:var(--ink); }
+.empty { text-align:center; padding:80px 20px; font-family:var(--serif); font-size:20px; font-style:italic; color:var(--muted); }
+
+/* MODAL */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; align-items:center; justify-content:center; padding:24px; }
+.overlay.open { display:flex; }
+.modal { background:var(--white); width:100%; max-width:800px; max-height:90vh; overflow-y:auto; display:grid; grid-template-columns:1fr 1fr; position:relative; }
+.modal-img { background:var(--paper); display:flex; align-items:center; justify-content:center; min-height:380px; padding:28px; }
+.modal-img img { max-width:100%; max-height:520px; object-fit:contain; display:block; }
+.modal-img-ph { font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.modal-body { padding:40px 32px; display:flex; flex-direction:column; overflow-y:auto; }
+.modal-close { position:absolute; top:14px; right:18px; background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1; z-index:1; }
+.modal-close:hover { color:var(--ink); }
+.m-artist { font-size:11px; font-weight:500; letter-spacing:.12em; text-transform:uppercase; color:var(--mid); margin-bottom:10px; }
+.m-title { font-family:var(--serif); font-size:25px; font-style:italic; line-height:1.25; margin-bottom:6px; }
+.m-specs { display:flex; flex-direction:column; gap:10px; padding:18px 0; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); margin-bottom:22px; margin-top:18px; }
+.spec-row { display:flex; justify-content:space-between; font-size:13px; gap:12px; }
+.spec-k { color:var(--muted); flex-shrink:0; }
+.spec-v { color:var(--ink); text-align:right; }
+.m-price { font-size:22px; font-family:var(--serif); margin-bottom:20px; }
+.inquire-btn { background:var(--ink); color:#fff; border:none; padding:14px 24px; font-size:12px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; font-family:var(--sans); font-weight:500; transition:opacity .15s; width:100%; text-decoration:none; display:block; text-align:center; }
+.inquire-btn:hover { opacity:.8; }
+.m-note { font-size:11px; color:var(--muted); margin-top:10px; text-align:center; line-height:1.6; }
+
+/* RESPONSIVE */
+@media (max-width:960px) { .grid { columns:2; } }
+@media (max-width:680px) {
+  .filter-toggle-btn { display:flex; }
+  .sidebar { position:fixed; top:0; left:0; height:100vh; z-index:150; background:var(--white); transform:translateX(-100%); transition:transform .25s ease; width:290px; box-shadow:4px 0 20px rgba(0,0,0,.12); }
+  .sidebar.open { transform:translateX(0); }
+  .backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:140; }
+  .backdrop.open { display:block; }
+  .main { padding:16px; }
+  .grid { columns:1; }
+  .modal { grid-template-columns:1fr; }
+  .modal-img { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo"><em>Bruno David</em> Gallery</div>
+  <div class="header-space"></div>
+  <button class="filter-toggle-btn" id="filterBtn">
+    <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+      <line x1="0" y1="1" x2="14" y2="1" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="3" y1="5.5" x2="14" y2="5.5" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="6" y1="10" x2="14" y2="10" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    Filters
+  </button>
+  <div class="sort-wrap">
+    Sort:&nbsp;
+    <select class="sort-select" id="sortSel">
+      <option value="default">Featured</option>
+      <option value="price-asc">Price: Low–High</option>
+      <option value="price-desc">Price: High–Low</option>
+      <option value="artist">Artist A–Z</option>
+      <option value="year-desc">Newest First</option>
+      <option value="year-asc">Oldest First</option>
+    </select>
+  </div>
+</header>
+
+<div class="pills-bar" id="pillsBar"><div class="pills-inner" id="pillsInner"></div></div>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+
+    <!-- COLOR -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Color</span><span class="chevron">▼</span></div>
+      <div class="filter-body"><div class="color-grid" id="colorGrid"></div></div>
+    </div>
+
+    <!-- SIZE -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Size</span><span class="chevron">▼</span></div>
+      <div class="filter-body">
+        <div class="size-grid">
+          <div class="size-box" data-s="0"><span class="size-box-name">Small</span><span class="size-box-range">Under 16″</span></div>
+          <div class="size-box" data-s="1"><span class="size-box-name">Medium</span><span class="size-box-range">16″–40″</span></div>
+          <div class="size-box" data-s="2"><span class="size-box-name">Large</span><span class="size-box-range">40″–60″</span></div>
+          <div class="size-box" data-s="3"><span class="size-box-name">Oversized</span><span class="size-box-range">Over 60″</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MEDIA -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Media</span><span class="chevron">▼</span></div>
+      <div class="filter-body" id="mediumBody"></div>
+    </div>
+
+    <!-- ARTIST -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Artist</span><span class="chevron">▼</span></div>
+      <div class="filter-body" id="artistBody"></div>
+    </div>
+
+    <!-- YEAR -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Year</span><span class="chevron">▼</span></div>
+      <div class="filter-body">
+        <div class="year-inputs">
+          <input class="year-input" id="yearMin" type="number" placeholder="From" min="1900" max="2099">
+          <span class="year-sep">–</span>
+          <input class="year-input" id="yearMax" type="number" placeholder="To" min="1900" max="2099">
+        </div>
+      </div>
+    </div>
+
+    <!-- PRICE -->
+    <div class="filter-section open">
+      <div class="filter-head"><span class="filter-head-label">Price</span><span class="chevron">▼</span></div>
+      <div class="filter-body">
+        <div class="price-inputs">
+          <input class="price-input" id="priceMin" type="number" placeholder="$ Min">
+          <span class="price-sep">–</span>
+          <input class="price-input" id="priceMax" type="number" placeholder="$ Max">
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="main">
+    <div class="results-header">
+      <div><span class="results-title">Available Works</span><span class="results-count" id="countEl"></span></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">✕</button>
+    <div class="modal-img" id="modalImg"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  COLORS — gallery staff picks which colors apply to each work.
+//  These appear as clickable swatches in the filter sidebar.
+//  To add/remove a color: edit this list.
+//  In the Google Sheet, staff types the color NAME (e.g. "Warm Red")
+//  in the "colors" column, comma-separated.
+// ═══════════════════════════════════════════════════════════════════════
+const COLORS = [
+  { id:"warm-red",    label:"Warm Red",    hex:"#c0392b" },
+  { id:"orange",      label:"Orange",      hex:"#c8703a" },
+  { id:"yellow",      label:"Yellow",      hex:"#d4ac0d" },
+  { id:"ochre",       label:"Ochre",       hex:"#c89a2a" },
+  { id:"olive",       label:"Olive",       hex:"#7d8c3a" },
+  { id:"green",       label:"Green",       hex:"#2e8b57" },
+  { id:"teal",        label:"Teal",        hex:"#2a8c8c" },
+  { id:"blue",        label:"Blue",        hex:"#3a6fa8" },
+  { id:"violet",      label:"Violet",      hex:"#7b5ea7" },
+  { id:"pink",        label:"Pink",        hex:"#c97a8a" },
+  { id:"brown",       label:"Brown",       hex:"#8b4513" },
+  { id:"sienna",      label:"Sienna",      hex:"#a0522d" },
+  { id:"black",       label:"Black",       hex:"#1a1917" },
+  { id:"gray",        label:"Gray",        hex:"#888075" },
+  { id:"white-cream", label:"White/Cream", hex:"#e8dfc8", bd:true },
+  { id:"gold",        label:"Gold",        hex:"#b8960c" },
+  { id:"metallic",    label:"Metallic",    hex:"#9e9e9e", bd:true },
+  { id:"multi",       label:"Multi",       hex:"linear-gradient(135deg,#c0392b,#3a6fa8,#2e8b57,#d4ac0d)", gradient:true },
+];
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MEDIUMS — these populate the Medium filter automatically from your data.
+//  In the Google Sheet, staff types the medium exactly as they want it shown.
+//  Common examples below — use these as the standard in the sheet:
+//
+//  Oil on canvas           Acrylic on canvas         Watercolor on paper
+//  Graphite on paper       Oil on panel              Mixed media on canvas
+//  Photography             Archival pigment print    Encaustic on panel
+//  Sculpture               Bronze                    Ceramic
+//  Works on paper          Collage                   Video / New media
+// ═══════════════════════════════════════════════════════════════════════
+
+const SIZE_NAMES  = ["Small","Medium","Large","Oversized"];
+const SIZE_RANGES = ["under 16″","16″–40″","40″–60″","60″+"];
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ARTWORKS — fetched live from the Bruno David Gallery inventory sheet.
+//  Edits to the Google Sheet appear here on next page load.
+//
+//  Sheet columns: artist | title | year | media | medium |
+//                 width | height | depth | price | colors | image_url
+//
+//  - The sheet must be shared with "Anyone with the link → Viewer".
+//  - colors  = comma-separated color ids from the COLORS list above
+//              (e.g. "blue, gray, white-cream")
+//  - price   = leave blank to show "Contact for price"
+//  - width / height / depth = numbers in inches (depth optional)
+// ═══════════════════════════════════════════════════════════════════════
+const SHEET_ID  = "1KEySlY0NiVWHfhcwG6UbuMZnGU-fxnLyY1mF3NfWTlY";
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+let ARTWORKS = [];
+
+// Minimal RFC-4180-ish CSV parser: handles quoted fields, embedded commas,
+// escaped quotes (""), and CRLF/LF line endings.
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cur = "", inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { cur += '"'; i++; }
+        else inQ = false;
+      } else cur += c;
+    } else if (c === '"') {
+      inQ = true;
+    } else if (c === ',') {
+      row.push(cur); cur = "";
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i+1] === '\n') i++;
+      row.push(cur); cur = "";
+      if (row.some(v => v !== "")) rows.push(row);
+      row = [];
+    } else {
+      cur += c;
+    }
+  }
+  if (cur !== "" || row.length > 0) {
+    row.push(cur);
+    if (row.some(v => v !== "")) rows.push(row);
+  }
+  return rows;
+}
+
+async function loadData() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = `<div class="empty">Loading inventory…</div>`;
+  const res = await fetch(SHEET_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Sheet fetch failed (HTTP ${res.status})`);
+  const rows = parseCSV(await res.text());
+  if (!rows.length) throw new Error("Sheet is empty");
+  const headers = rows[0].map(h => h.trim().toLowerCase());
+  const col = name => headers.indexOf(name);
+  const iArtist = col("artist"),  iTitle  = col("title"),  iYear   = col("year"),
+        iMedia  = col("media"),   iMedium = col("medium"), iW      = col("width"),
+        iH      = col("height"),  iD      = col("depth"),  iPrice  = col("price"),
+        iColors = col("colors"),  iImg    = col("image_url");
+  ARTWORKS = rows.slice(1)
+    .filter(r => (r[iArtist] || "").trim())
+    .map((r, n) => ({
+      id:     n + 1,
+      artist: (r[iArtist] || "").trim(),
+      title:  (r[iTitle]  || "").trim(),
+      year:   parseInt(r[iYear], 10) || 0,
+      media:  (r[iMedia]  || "").trim(),
+      medium: (r[iMedium] || "").trim(),
+      w:      parseFloat(r[iW]) || 0,
+      h:      parseFloat(r[iH]) || 0,
+      d:      iD >= 0 ? (parseFloat(r[iD]) || 0) : 0,
+      price:  parseFloat((r[iPrice] || "").replace(/[^0-9.]/g, "")) || 0,
+      colors: (r[iColors] || "").split(",").map(s => s.trim()).filter(Boolean),
+      image:  (r[iImg]    || "").trim(),
+    }));
+}
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  colors:new Set(), sizes:new Set(), mediums:new Set(), artists:new Set(),
+  yMin:null, yMax:null, pMin:null, pMax:null, sort:"default"
+};
+
+function bucket(a) { const m=Math.max(a.w,a.h); return m<16?0:m<40?1:m<60?2:3; }
+
+// ═══════════════════════════════════════════════════
+//  BUILD SIDEBAR
+// ═══════════════════════════════════════════════════
+function buildSidebar() {
+  // Colors
+  document.getElementById("colorGrid").innerHTML = COLORS.map(c => {
+    const bg = c.gradient ? c.hex : `background:${c.hex}`;
+    const style = c.gradient
+      ? `background:${c.hex};`
+      : `background:${c.hex};${c.bd?'border-color:#ccc;':''}`;
+    return `<div class="color-swatch" data-c="${c.id}" title="${c.label}">
+      <div class="color-circle" style="${style}"></div>
+      <span class="color-circle-label">${c.label}</span>
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".color-swatch").forEach(el =>
+    el.addEventListener("click", () => {
+      const c=el.dataset.c; S.colors.has(c)?S.colors.delete(c):S.colors.add(c);
+      el.classList.toggle("selected",S.colors.has(c)); render();
+    })
+  );
+
+  // Media — pulled from actual data, deduped & sorted
+  const mediums=[...new Set(ARTWORKS.map(a=>a.media).filter(Boolean))].sort();
+  document.getElementById("mediumBody").innerHTML = mediums.map(m =>
+    `<label class="check-item"><input type="checkbox" data-k="mediums" data-v="${m}"><span class="check-label">${m}</span></label>`
+  ).join("");
+
+  // Artists — pulled from actual data
+  const artists=[...new Set(ARTWORKS.map(a=>a.artist))].sort();
+  document.getElementById("artistBody").innerHTML = artists.map(a =>
+    `<label class="check-item"><input type="checkbox" data-k="artists" data-v="${a}"><span class="check-label">${a}</span></label>`
+  ).join("");
+
+  document.querySelectorAll("input[type=checkbox]").forEach(cb =>
+    cb.addEventListener("change", () => {
+      cb.checked ? S[cb.dataset.k].add(cb.dataset.v) : S[cb.dataset.k].delete(cb.dataset.v);
+      render();
+    })
+  );
+}
+
+// ═══════════════════════════════════════════════════
+//  FILTER + SORT
+// ═══════════════════════════════════════════════════
+function filtered() {
+  let w=[...ARTWORKS];
+  if(S.colors.size)  w=w.filter(a=>a.colors.some(c=>S.colors.has(c)));
+  if(S.sizes.size)   w=w.filter(a=>S.sizes.has(bucket(a)));
+  if(S.mediums.size) w=w.filter(a=>S.mediums.has(a.media));
+  if(S.artists.size) w=w.filter(a=>S.artists.has(a.artist));
+  if(S.yMin!=null)   w=w.filter(a=>a.year>=S.yMin);
+  if(S.yMax!=null)   w=w.filter(a=>a.year<=S.yMax);
+  if(S.pMin!=null)   w=w.filter(a=>a.price && a.price>=S.pMin);
+  if(S.pMax!=null)   w=w.filter(a=>a.price && a.price<=S.pMax);
+  switch(S.sort){
+    case"price-asc":  w.sort((a,b)=>a.price-b.price); break;
+    case"price-desc": w.sort((a,b)=>b.price-a.price); break;
+    case"artist":     w.sort((a,b)=>a.artist.localeCompare(b.artist)); break;
+    case"year-desc":  w.sort((a,b)=>b.year-a.year); break;
+    case"year-asc":   w.sort((a,b)=>a.year-b.year); break;
+  }
+  return w;
+}
+
+// ═══════════════════════════════════════════════════
+//  PILLS
+// ═══════════════════════════════════════════════════
+function renderPills() {
+  const pills=[];
+  S.colors.forEach(c=>{const col=COLORS.find(x=>x.id===c);pills.push({label:col?col.label:c,rm:()=>{S.colors.delete(c);document.querySelector(`.color-swatch[data-c="${c}"]`)?.classList.remove("selected");}});});
+  S.sizes.forEach(s=>pills.push({label:`${SIZE_NAMES[s]} (${SIZE_RANGES[s]})`,rm:()=>{S.sizes.delete(s);document.querySelector(`.size-box[data-s="${s}"]`)?.classList.remove("selected");}}));
+  S.mediums.forEach(m=>pills.push({label:m,rm:()=>S.mediums.delete(m)}));
+  S.artists.forEach(a=>pills.push({label:a,rm:()=>S.artists.delete(a)}));
+  if(S.yMin||S.yMax) pills.push({label:`${S.yMin||''}–${S.yMax||''}`,rm:()=>{S.yMin=null;S.yMax=null;document.getElementById("yearMin").value="";document.getElementById("yearMax").value="";}});
+  if(S.pMin||S.pMax) pills.push({label:`$${(S.pMin||0).toLocaleString()}–${S.pMax?'$'+S.pMax.toLocaleString():'Any'}`,rm:()=>{S.pMin=null;S.pMax=null;document.getElementById("priceMin").value="";document.getElementById("priceMax").value="";}});
+  const bar=document.getElementById("pillsBar"),inner=document.getElementById("pillsInner");
+  bar.classList.toggle("has-pills",pills.length>0);
+  inner.innerHTML=pills.map((p,i)=>`<div class="pill" data-i="${i}">${p.label} <span class="pill-x">×</span></div>`).join("")+(pills.length>1?`<button class="clear-all-pill" id="clearAll">Clear all</button>`:"");
+  inner.querySelectorAll(".pill").forEach(el=>el.addEventListener("click",()=>{pills[+el.dataset.i].rm();render();}));
+  document.getElementById("clearAll")?.addEventListener("click",clearAll);
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function render() {
+  const works=filtered();
+  document.getElementById("countEl").textContent=`${works.length} work${works.length!==1?"s":""}`;
+  const grid=document.getElementById("grid");
+  if(!works.length){grid.innerHTML=`<div class="empty">No works match the current filters.</div>`;renderPills();return;}
+
+  grid.innerHTML=works.map(a=>{
+    const imgHtml = a.image
+      ? `<img src="${a.image}" alt="${a.title}" loading="lazy">`
+      : `<div class="img-placeholder" style="height:200px">Image forthcoming</div>`;
+    return `<div class="grid-item" data-id="${a.id}">
+      <div class="img-wrap">${imgHtml}</div>
+      <div class="art-artist">${a.artist}</div>
+      <div class="art-title">${a.title}</div>
+      <div class="art-year-medium">${a.year} &nbsp;·&nbsp; ${a.medium}</div>
+      <div class="art-dims">${a.w} × ${a.h}${a.d ? ' × ' + a.d : ''} in.</div>
+      <div class="art-price">${a.price ? '$'+a.price.toLocaleString() : 'Contact for price'}</div>
+    </div>`;
+  }).join("");
+
+  grid.querySelectorAll(".grid-item").forEach(el=>el.addEventListener("click",()=>openModal(+el.dataset.id)));
+  renderPills();
+}
+
+// ═══════════════════════════════════════════════════
+//  MODAL
+// ═══════════════════════════════════════════════════
+function openModal(id) {
+  const a=ARTWORKS.find(x=>x.id===id); if(!a) return;
+  document.getElementById("modalImg").innerHTML = a.image
+    ? `<img src="${a.image}" alt="${a.title}">`
+    : `<div class="modal-img-ph">Image forthcoming</div>`;
+  const mailto=`mailto:info@brunodavidgallery.com?subject=Inquiry: ${encodeURIComponent(a.title)} by ${encodeURIComponent(a.artist)}&body=Hello,%0A%0AI am interested in "${a.title}" (${a.year}) by ${a.artist}.%0A%0APlease send more information.%0A%0AThank you.`;
+  document.getElementById("modalBody").innerHTML=`
+    <div class="m-artist">${a.artist}</div>
+    <div class="m-title">${a.title}</div>
+    <div class="m-specs">
+      <div class="spec-row"><span class="spec-k">Year</span><span class="spec-v">${a.year}</span></div>
+      <div class="spec-row"><span class="spec-k">Medium</span><span class="spec-v">${a.medium}</span></div>
+      <div class="spec-row"><span class="spec-k">Dimensions</span><span class="spec-v">${a.w} × ${a.h}${a.d ? ' × ' + a.d : ''} in.</span></div>
+    </div>
+    <div class="m-price">${a.price ? '$'+a.price.toLocaleString() : 'Contact for price'}</div>
+    <a class="inquire-btn" href="${mailto}">Inquire About This Work</a>
+    <p class="m-note">Bruno David Gallery &nbsp;·&nbsp; Saint Louis, MO<br>info@brunodavidgallery.com &nbsp;·&nbsp; 314.696.2377</p>`;
+  document.getElementById("overlay").classList.add("open");
+}
+
+function closeModal(){document.getElementById("overlay").classList.remove("open");}
+
+// ═══════════════════════════════════════════════════
+//  CLEAR ALL
+// ═══════════════════════════════════════════════════
+function clearAll(){
+  S.colors.clear();S.sizes.clear();S.mediums.clear();S.artists.clear();S.yMin=null;S.yMax=null;S.pMin=null;S.pMax=null;
+  document.querySelectorAll(".color-swatch").forEach(el=>el.classList.remove("selected"));
+  document.querySelectorAll(".size-box").forEach(el=>el.classList.remove("selected"));
+  document.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
+  ["yearMin","yearMax","priceMin","priceMax"].forEach(id=>document.getElementById(id).value="");
+  render();
+}
+
+// ═══════════════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════════════
+document.querySelectorAll(".size-box").forEach(box=>box.addEventListener("click",()=>{const s=+box.dataset.s;S.sizes.has(s)?S.sizes.delete(s):S.sizes.add(s);box.classList.toggle("selected",S.sizes.has(s));render();}));
+document.querySelectorAll(".filter-head").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
+document.getElementById("sortSel").addEventListener("change",e=>{S.sort=e.target.value;render();});
+document.getElementById("yearMin").addEventListener("input",e=>{S.yMin=e.target.value?+e.target.value:null;render();});
+document.getElementById("yearMax").addEventListener("input",e=>{S.yMax=e.target.value?+e.target.value:null;render();});
+document.getElementById("priceMin").addEventListener("input",e=>{S.pMin=e.target.value?+e.target.value:null;render();});
+document.getElementById("priceMax").addEventListener("input",e=>{S.pMax=e.target.value?+e.target.value:null;render();});
+document.getElementById("modalClose").addEventListener("click",closeModal);
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
+document.getElementById("filterBtn").addEventListener("click",()=>{document.getElementById("sidebar").classList.add("open");document.getElementById("backdrop").classList.add("open");});
+document.getElementById("backdrop").addEventListener("click",()=>{document.getElementById("sidebar").classList.remove("open");document.getElementById("backdrop").classList.remove("open");});
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+loadData()
+  .then(() => { buildSidebar(); render(); })
+  .catch(err => {
+    console.error(err);
+    document.getElementById("grid").innerHTML =
+      `<div class="empty">Unable to load inventory.<br><span style="font-size:13px">${err.message}. Make sure the Google Sheet is shared as “Anyone with the link → Viewer”.</span></div>`;
+  });
+</script>
+</body>
+</html>
