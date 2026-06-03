@@ -32,8 +32,6 @@ body { font-family:var(--sans); color:var(--ink); background:var(--white); -webk
   border:1px solid var(--rule); padding:7px 14px; cursor:pointer;
   font-size:13px; color:var(--ink); font-family:var(--sans);
 }
-.sort-wrap { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--mid); }
-.sort-select { border:none; background:none; font-size:13px; color:var(--ink); cursor:pointer; outline:none; font-family:var(--sans); }
 
 /* ACTIVE FILTER PILLS */
 .pills-bar { border-bottom:1px solid var(--rule); background:var(--white); display:none; }
@@ -95,12 +93,6 @@ body { font-family:var(--sans); color:var(--ink); background:var(--white); -webk
 .year-input { flex:1; border:1px solid var(--rule); padding:7px 8px; font-size:13px; font-family:var(--sans); color:var(--ink); outline:none; border-radius:2px; background:var(--white); }
 .year-input:focus { border-color:var(--ink); }
 .year-sep { color:var(--muted); font-size:13px; }
-
-/* PRICE */
-.price-inputs { display:flex; gap:8px; align-items:center; padding:4px 0; }
-.price-input { flex:1; border:1px solid var(--rule); padding:7px 8px; font-size:13px; font-family:var(--sans); color:var(--ink); outline:none; border-radius:2px; background:var(--white); }
-.price-input:focus { border-color:var(--ink); }
-.price-sep { color:var(--muted); font-size:13px; }
 
 /* MAIN */
 .main { flex:1; padding:24px 28px; min-width:0; }
@@ -171,17 +163,6 @@ body { font-family:var(--sans); color:var(--ink); background:var(--white); -webk
     </svg>
     Filters
   </button>
-  <div class="sort-wrap">
-    Sort:&nbsp;
-    <select class="sort-select" id="sortSel">
-      <option value="default">Featured</option>
-      <option value="price-asc">Price: Low–High</option>
-      <option value="price-desc">Price: High–Low</option>
-      <option value="artist">Artist A–Z</option>
-      <option value="year-desc">Newest First</option>
-      <option value="year-asc">Oldest First</option>
-    </select>
-  </div>
 </header>
 
 <div class="pills-bar" id="pillsBar"><div class="pills-inner" id="pillsInner"></div></div>
@@ -229,18 +210,6 @@ body { font-family:var(--sans); color:var(--ink); background:var(--white); -webk
           <input class="year-input" id="yearMin" type="number" placeholder="From" min="1900" max="2099">
           <span class="year-sep">–</span>
           <input class="year-input" id="yearMax" type="number" placeholder="To" min="1900" max="2099">
-        </div>
-      </div>
-    </div>
-
-    <!-- PRICE -->
-    <div class="filter-section open">
-      <div class="filter-head"><span class="filter-head-label">Price</span><span class="chevron">▼</span></div>
-      <div class="filter-body">
-        <div class="price-inputs">
-          <input class="price-input" id="priceMin" type="number" placeholder="$ Min">
-          <span class="price-sep">–</span>
-          <input class="price-input" id="priceMax" type="number" placeholder="$ Max">
         </div>
       </div>
     </div>
@@ -325,6 +294,14 @@ const SHEET_ID  = "1KEySlY0NiVWHfhcwG6UbuMZnGU-fxnLyY1mF3NfWTlY";
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 let ARTWORKS = [];
 
+// Consolidate near-duplicate / misspelled media values from the sheet
+// into a single canonical label shown in the Media filter.
+const MEDIA_ALIASES = {
+  "Work on Paper":  "Works on Paper",
+  "Works Paper":    "Works on Paper",
+  "Works on Paper": "Works on Paper",
+};
+
 // Minimal RFC-4180-ish CSV parser: handles quoted fields, embedded commas,
 // escaped quotes (""), and CRLF/LF line endings.
 function parseCSV(text) {
@@ -377,7 +354,7 @@ async function loadData() {
       artist: (r[iArtist] || "").trim(),
       title:  (r[iTitle]  || "").trim(),
       year:   parseInt(r[iYear], 10) || 0,
-      media:  (r[iMedia]  || "").trim(),
+      media:  (m => MEDIA_ALIASES[m] || m)((r[iMedia] || "").trim()),
       medium: (r[iMedium] || "").trim(),
       w:      parseFloat(r[iW]) || 0,
       h:      parseFloat(r[iH]) || 0,
@@ -393,7 +370,7 @@ async function loadData() {
 // ═══════════════════════════════════════════════════
 const S = {
   colors:new Set(), sizes:new Set(), mediums:new Set(), artists:new Set(),
-  yMin:null, yMax:null, pMin:null, pMax:null, sort:"default"
+  yMin:null, yMax:null
 };
 
 function bucket(a) { const m=Math.max(a.w,a.h); return m<16?0:m<40?1:m<60?2:3; }
@@ -451,15 +428,6 @@ function filtered() {
   if(S.artists.size) w=w.filter(a=>S.artists.has(a.artist));
   if(S.yMin!=null)   w=w.filter(a=>a.year>=S.yMin);
   if(S.yMax!=null)   w=w.filter(a=>a.year<=S.yMax);
-  if(S.pMin!=null)   w=w.filter(a=>a.price && a.price>=S.pMin);
-  if(S.pMax!=null)   w=w.filter(a=>a.price && a.price<=S.pMax);
-  switch(S.sort){
-    case"price-asc":  w.sort((a,b)=>a.price-b.price); break;
-    case"price-desc": w.sort((a,b)=>b.price-a.price); break;
-    case"artist":     w.sort((a,b)=>a.artist.localeCompare(b.artist)); break;
-    case"year-desc":  w.sort((a,b)=>b.year-a.year); break;
-    case"year-asc":   w.sort((a,b)=>a.year-b.year); break;
-  }
   return w;
 }
 
@@ -473,7 +441,6 @@ function renderPills() {
   S.mediums.forEach(m=>pills.push({label:m,rm:()=>S.mediums.delete(m)}));
   S.artists.forEach(a=>pills.push({label:a,rm:()=>S.artists.delete(a)}));
   if(S.yMin||S.yMax) pills.push({label:`${S.yMin||''}–${S.yMax||''}`,rm:()=>{S.yMin=null;S.yMax=null;document.getElementById("yearMin").value="";document.getElementById("yearMax").value="";}});
-  if(S.pMin||S.pMax) pills.push({label:`$${(S.pMin||0).toLocaleString()}–${S.pMax?'$'+S.pMax.toLocaleString():'Any'}`,rm:()=>{S.pMin=null;S.pMax=null;document.getElementById("priceMin").value="";document.getElementById("priceMax").value="";}});
   const bar=document.getElementById("pillsBar"),inner=document.getElementById("pillsInner");
   bar.classList.toggle("has-pills",pills.length>0);
   inner.innerHTML=pills.map((p,i)=>`<div class="pill" data-i="${i}">${p.label} <span class="pill-x">×</span></div>`).join("")+(pills.length>1?`<button class="clear-all-pill" id="clearAll">Clear all</button>`:"");
@@ -537,11 +504,11 @@ function closeModal(){document.getElementById("overlay").classList.remove("open"
 //  CLEAR ALL
 // ═══════════════════════════════════════════════════
 function clearAll(){
-  S.colors.clear();S.sizes.clear();S.mediums.clear();S.artists.clear();S.yMin=null;S.yMax=null;S.pMin=null;S.pMax=null;
+  S.colors.clear();S.sizes.clear();S.mediums.clear();S.artists.clear();S.yMin=null;S.yMax=null;
   document.querySelectorAll(".color-swatch").forEach(el=>el.classList.remove("selected"));
   document.querySelectorAll(".size-box").forEach(el=>el.classList.remove("selected"));
   document.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
-  ["yearMin","yearMax","priceMin","priceMax"].forEach(id=>document.getElementById(id).value="");
+  ["yearMin","yearMax"].forEach(id=>document.getElementById(id).value="");
   render();
 }
 
@@ -550,11 +517,8 @@ function clearAll(){
 // ═══════════════════════════════════════════════════
 document.querySelectorAll(".size-box").forEach(box=>box.addEventListener("click",()=>{const s=+box.dataset.s;S.sizes.has(s)?S.sizes.delete(s):S.sizes.add(s);box.classList.toggle("selected",S.sizes.has(s));render();}));
 document.querySelectorAll(".filter-head").forEach(h=>h.addEventListener("click",()=>h.parentElement.classList.toggle("open")));
-document.getElementById("sortSel").addEventListener("change",e=>{S.sort=e.target.value;render();});
 document.getElementById("yearMin").addEventListener("input",e=>{S.yMin=e.target.value?+e.target.value:null;render();});
 document.getElementById("yearMax").addEventListener("input",e=>{S.yMax=e.target.value?+e.target.value:null;render();});
-document.getElementById("priceMin").addEventListener("input",e=>{S.pMin=e.target.value?+e.target.value:null;render();});
-document.getElementById("priceMax").addEventListener("input",e=>{S.pMax=e.target.value?+e.target.value:null;render();});
 document.getElementById("modalClose").addEventListener("click",closeModal);
 document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
 document.getElementById("filterBtn").addEventListener("click",()=>{document.getElementById("sidebar").classList.add("open");document.getElementById("backdrop").classList.add("open");});
